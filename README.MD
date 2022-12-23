@@ -12,6 +12,10 @@ For example:
 
 The latest example can be found in at `examples/plotly_mapbox_events_carshare_consistent_map_layout.py`.
 
+You can see it in action here: https://youtu.be/2rIpb0LyNgc
+
+
+
 Refer to the "Examples" section for a list of all examples, chronologically built and extended.
 
 ## External reference documents
