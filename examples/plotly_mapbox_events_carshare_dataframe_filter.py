@@ -20,11 +20,21 @@ from streamlit_plotly_mapbox_events import plotly_mapbox_events
 st.set_page_config(layout="wide")
 
 df = px.data.carshare()
+df = df.assign(
+    **{
+        "id_lon-lat": lambda df: df["centroid_lon"].astype(str)
+        + "-"
+        + df["centroid_lat"].astype(str)
+    },
+    index=df.index,
+)
+
 mapbox = px.scatter_mapbox(
     df,
     lat="centroid_lat",
     lon="centroid_lon",
     color="peak_hour",
+    hover_name="index",
     size="car_hours",
     color_continuous_scale=px.colors.cyclical.IceFire,
     size_max=15,
@@ -44,6 +54,35 @@ mapbox_events = plotly_mapbox_events(
     override_height=700,
     override_width="100%",
 )
+
+if mapbox_events[0]:
+    st.write("POINT CLICKED")
+    lat_lon_id = [f"{x['lon']}-{x['lat']}" for x in mapbox_events[0]]
+    df_select = df.loc[df["id_lon-lat"].isin(lat_lon_id)]
+    st.write(df_select)
+else:
+    st.empty()
+
+if mapbox_events[1]:
+    st.write("POINT SELECTED")
+    lat_lon_id = [f"{x['lon']}-{x['lat']}" for x in mapbox_events[1]]
+    df_select = df.loc[df["id_lon-lat"].isin(lat_lon_id)]
+    st.write(df_select)
+else:
+    st.empty()
+
+if mapbox_events[2]:
+    st.write("POINT HOVERED")
+    lat_lon_id = [f"{x['lon']}-{x['lat']}" for x in mapbox_events[2]]
+    df_select = df.loc[df["id_lon-lat"].isin(lat_lon_id)]
+    st.write(df_select)
+else:
+    st.empty()
+
+if mapbox_events[2]:
+    st.write("LAYOUT CHANGED")
+else:
+    st.empty()
 
 plot_name_holder_clicked = st.empty()
 plot_name_holder_selected = st.empty()
