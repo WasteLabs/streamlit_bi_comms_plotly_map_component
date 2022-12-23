@@ -24,6 +24,19 @@ PLOTLY_HEIGHT = 500
 LAT_COL = "centroid_lat"
 LON_COL = "centroid_lon"
 
+LAT_LON_QUERIES = [
+    "lat_lon_click_query",
+    "lat_lon_select_query",
+    "lat_lon_hover_query",
+    "lat_lon_layout_query",
+]
+LAT_LON_QUERIES_ACTIVE = {
+    "lat_lon_click_query": True,
+    "lat_lon_select_query": True,
+    "lat_lon_hover_query": False,
+    "lat_lon_layout_query": False,
+}
+
 
 @st.experimental_singleton
 def load_data_map() -> pd.DataFrame:
@@ -32,8 +45,9 @@ def load_data_map() -> pd.DataFrame:
 
 def initialize_state():
     """Initializes all filters and counter in Streamlit Session State"""
-    if "lat_lon_select_query" not in st.session_state:
-        st.session_state["lat_lon_select_query"] = set()
+    for query in LAT_LON_QUERIES:
+        if query not in st.session_state:
+            st.session_state[query] = set()
 
     if "counter" not in st.session_state:
         st.session_state.counter = 0
@@ -42,7 +56,8 @@ def initialize_state():
 def reset_state_callback():
     """Resets all filters and increments counter in Streamlit Session State"""
     st.session_state.counter = 1 + st.session_state.counter
-    st.session_state["lat_lon_select_query"] = set()
+    for query in LAT_LON_QUERIES:
+        st.session_state[query] = set()
 
 
 def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -59,16 +74,18 @@ def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         selected=True,
     )
 
-    if st.session_state["lat_lon_select_query"]:
+    selected_ids = set()
+    query_update = False
+    for query in LAT_LON_QUERIES:
+        if st.session_state[query]:
+            selected_ids.update(st.session_state[query])
+            query_update = True
+    if query_update:
         df.loc[
-            ~df["lon-lat__id"].isin(st.session_state["lat_lon_select_query"]),
+            ~df["lon-lat__id"].isin(selected_ids),
             "selected",
         ] = False
-        df_selected = df[
-            df["lon-lat__id"].isin(st.session_state["lat_lon_select_query"])
-        ]
-    else:
-        df_selected = pd.DataFrame(columns=df.columns)
+    df_selected = df[df["lon-lat__id"].isin(selected_ids)]
     return df, df_selected
 
 
@@ -105,16 +122,23 @@ def render_plotly_map_ui(transformed_df: pd.DataFrame) -> Dict:
     fig = build_map(transformed_df)
     map_selected = plotly_mapbox_events(
         fig,
-        select_event=True,
-        key=f"lat_lon_select_query{st.session_state.counter}",
+        click_event=LAT_LON_QUERIES_ACTIVE["lat_lon_click_query"],
+        select_event=LAT_LON_QUERIES_ACTIVE["lat_lon_select_query"],
+        hover_event=LAT_LON_QUERIES_ACTIVE["lat_lon_hover_query"],
+        relayout_event=LAT_LON_QUERIES_ACTIVE["lat_lon_layout_query"],
+        key=f"lat_lon_query{st.session_state.counter}",
         override_height=PLOTLY_HEIGHT,
         override_width="%100",
     )
 
     current_query = {}
-    current_query["lat_lon_select_query"] = {
-        f"{x['lon']}-{x['lat']}" for x in map_selected[1]
-    }
+    i = 0
+    for query in LAT_LON_QUERIES:
+        if LAT_LON_QUERIES_ACTIVE[query] is True:
+            current_query[query] = {f"{x['lon']}-{x['lat']}" for x in map_selected[i]}
+            i += 1
+        else:
+            current_query[query] = set()
     return current_query
 
 
@@ -125,9 +149,10 @@ def update_state(current_query: Dict[str, Set]):
     rerun Streamlit to activate the filtering and plot updating with the new info in State.
     """
     rerun = False
-    if current_query["lat_lon_select_query"] - st.session_state["lat_lon_select_query"]:
-        st.session_state["lat_lon_select_query"] = current_query["lat_lon_select_query"]
-        rerun = True
+    for query in LAT_LON_QUERIES:
+        if current_query[query] - st.session_state[query]:
+            st.session_state[query] = current_query[query]
+            rerun = True
 
     if rerun:
         st.experimental_rerun()
