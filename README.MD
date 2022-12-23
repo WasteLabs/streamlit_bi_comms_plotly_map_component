@@ -14,7 +14,7 @@ The latest example can be found in at `examples/plotly_mapbox_events_carshare_co
 
 You can see it in action here: https://youtu.be/2rIpb0LyNgc
 
-
+![Alt Text](https://media.giphy.com/media/vFKqnCdLPNOKc/giphy.gif)
 
 Refer to the "Examples" section for a list of all examples, chronologically built and extended.
 
@@ -28,6 +28,8 @@ The closest existing component found for the above is:
 And a demo that shows plotly being used in this way:
 
 1. <https://github.com/andfanilo/social-media-tutorials/blob/master/20220914-crossfiltering/streamlit_app.py> with a video here: <https://youtu.be/htXgwEXwmNs>
+
+![Alt Text](docs/plotly_map_select_update.gif)
 
 ## Examples
 
