@@ -29,7 +29,7 @@ And a demo that shows plotly being used in this way:
 
 1. <https://github.com/andfanilo/social-media-tutorials/blob/master/20220914-crossfiltering/streamlit_app.py> with a video here: <https://youtu.be/htXgwEXwmNs>
 
-![Alt Text](https://raw.githubusercontent.com/WasteLabs/streamlit_bi_comms_plotly_map_component/799d366d788deef5ad06ae34a6bfaf489f91254f/docs/plotly_map_select_update.gif))
+![Alt Text](https://raw.githubusercontent.com/WasteLabs/streamlit_bi_comms_plotly_map_component/799d366d788deef5ad06ae34a6bfaf489f91254f/docs/plotly_map_select_update.gif)
 
 ## Examples
 
