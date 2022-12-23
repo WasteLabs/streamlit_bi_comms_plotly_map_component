@@ -12,7 +12,6 @@ streamlit run examples/plotly_mapbox_events_carshare_dataframe_filter.py
 Exposes all the main plotly mapbox elements needed.
 """
 
-import pandas as pd
 import plotly.express as px
 import streamlit as st
 from streamlit_plotly_mapbox_events import plotly_mapbox_events
@@ -38,7 +37,7 @@ mapbox = px.scatter_mapbox(
     size="car_hours",
     color_continuous_scale=px.colors.cyclical.IceFire,
     size_max=15,
-    zoom=10,
+    zoom=11,
     height=700,
 )
 mapbox.update_layout(
@@ -79,9 +78,8 @@ if mapbox_events[2]:
 else:
     st.empty()
 
-if mapbox_events[2]:
+if mapbox_events[3]:
     st.write("LAYOUT CHANGED")
-    st.write(f"Hovered Point: {mapbox_events[3]}")
     min_max_lat_lon = mapbox_events[3]["raw"]["mapbox._derived"]["coordinates"]
     min_lon = min_max_lat_lon[0][0]
     max_lon = min_max_lat_lon[1][0]
@@ -95,8 +93,11 @@ if mapbox_events[2]:
         & (df["centroid_lat"] >= min_lat)
         & (df["centroid_lat"] <= max_lat)
     )
+    center = mapbox_events[3]["raw"]["mapbox.center"]
+    zoom = mapbox_events[3]["raw"]["mapbox.zoom"]
     df_select = df.loc[selection_flag]
     st.write(df_select)
+
 
 plot_name_holder_clicked = st.empty()
 plot_name_holder_selected = st.empty()
