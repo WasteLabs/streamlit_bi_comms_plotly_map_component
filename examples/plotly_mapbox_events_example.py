@@ -4,7 +4,7 @@ Example taken from https://github.com/reyemb/streamlit-plotly-mapbox-events
 Run it via the below from the main project:
 
 ```
-streamlit run examples/plotly_mapbix_events_example.py
+streamlit run examples/plotly_mapbox_events_example.py
 ```
 
 Exposes all the main plotly mapbox elements needed.
