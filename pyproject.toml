@@ -5,14 +5,19 @@ description = "Template (and research) for a plotly map with bidirectoinal commu
 authors = ["ejwillemse <ejwillemse@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "bi_comms_plotly_map"}]
+packages = [{include = "src/bi_comms_plotly_map"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
 streamlit = "^1.16.0"
 plotly = "^5.11.0"
 streamlit-plotly-mapboxEvents = "^0.0.4"
+pylint = "^2.15.9"
+black = "^22.12.0"
 
+
+[tool.poetry.group.dev.dependencies]
+pylint = "^2.15.9"
 
 [build-system]
 requires = ["poetry-core"]
