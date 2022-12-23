@@ -6,6 +6,8 @@ Run it via the below from the main project:
 ```
 streamlit run examples/plotly_mapbix_events_example.py
 ```
+
+Exposes all the main plotly mapbox elements needed.
 """
 
 import pandas as pd
