@@ -19,6 +19,13 @@ And a demo that shows plotly being used in this way:
 
 1. <https://github.com/andfanilo/social-media-tutorials/blob/master/20220914-crossfiltering/streamlit_app.py> with a video here: <https://youtu.be/htXgwEXwmNs>
 
+## Examples
+
+### Basic plotly map select view returned results
+
+* examples/plotly_mapbox_events_example.py: original example with a bit of modication from <https://github.com/reyemb/streamlit-plotly-mapbox-events> [issue #4]
+* examples/plotly_mapbox_events_carshare_example.py: example above extended with example from <https://plotly.com/python/scattermapbox/>  [issue #4]
+
 ## Note on poetry
 
 To get it fully up and running in shell:
