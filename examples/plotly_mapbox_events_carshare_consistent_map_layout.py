@@ -28,14 +28,14 @@ LAT_LON_QUERIES = [
     "lat_lon_click_query",
     "lat_lon_select_query",
     "lat_lon_hover_query",
-    "lat_lon_layout_query",
 ]
 LAT_LON_QUERIES_ACTIVE = {
-    "lat_lon_click_query": True,
+    "lat_lon_click_query": False,
     "lat_lon_select_query": True,
     "lat_lon_hover_query": False,
-    "lat_lon_layout_query": False,
 }
+
+MAP_ZOOM = 11
 
 
 @st.experimental_singleton
@@ -49,15 +49,23 @@ def initialize_state():
         if query not in st.session_state:
             st.session_state[query] = set()
 
+    if "map_move_query" not in st.session_state:
+        st.session_state.map_move_query = set()
+
+    if "map_layout" not in st.session_state:
+        st.session_state.map_layout = {}
+
     if "counter" not in st.session_state:
         st.session_state.counter = 0
 
 
 def reset_state_callback():
     """Resets all filters and increments counter in Streamlit Session State"""
-    st.session_state.counter = 1 + st.session_state.counter
+    st.session_state.counter += 1
     for query in LAT_LON_QUERIES:
         st.session_state[query] = set()
+    st.session_state.map_move_query = set()
+    st.session_state.map_layout = {}
 
 
 def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -80,6 +88,7 @@ def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         if st.session_state[query]:
             selected_ids.update(st.session_state[query])
             query_update = True
+
     if query_update:
         df.loc[
             ~df["lon-lat__id"].isin(selected_ids),
@@ -90,6 +99,14 @@ def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def build_map(df: pd.DataFrame) -> go.Figure:
+
+    if st.session_state.map_layout:
+        center = st.session_state.map_layout["center"]
+        zoom = st.session_state.map_layout["zoom"]
+    else:
+        center = {"lat": df[LAT_COL].median(), "lon": df[LON_COL].median()}
+        zoom = MAP_ZOOM
+
     fig = px.scatter_mapbox(
         df,
         lat=LAT_COL,
@@ -101,7 +118,8 @@ def build_map(df: pd.DataFrame) -> go.Figure:
         size="car_hours",
         color_continuous_scale=px.colors.cyclical.IceFire,
         size_max=15,
-        zoom=11,
+        zoom=zoom,
+        center=center,
     )
     fig.update_layout(
         mapbox_style="carto-positron",
@@ -125,7 +143,7 @@ def render_plotly_map_ui(transformed_df: pd.DataFrame) -> Dict:
         click_event=LAT_LON_QUERIES_ACTIVE["lat_lon_click_query"],
         select_event=LAT_LON_QUERIES_ACTIVE["lat_lon_select_query"],
         hover_event=LAT_LON_QUERIES_ACTIVE["lat_lon_hover_query"],
-        relayout_event=LAT_LON_QUERIES_ACTIVE["lat_lon_layout_query"],
+        relayout_event=True,
         key=f"lat_lon_query{st.session_state.counter}",
         override_height=PLOTLY_HEIGHT,
         override_width="%100",
@@ -139,6 +157,17 @@ def render_plotly_map_ui(transformed_df: pd.DataFrame) -> Dict:
             i += 1
         else:
             current_query[query] = set()
+
+    if map_selected[-1]:
+        st.session_state.map_layout["center"] = map_selected[-1]["raw"]["mapbox.center"]
+        st.session_state.map_layout["zoom"] = map_selected[-1]["zoom"]
+        current_query["map_move_query"] = {
+            map_selected[-1]["raw"]["mapbox.center"]["lat"],
+            map_selected[-1]["raw"]["mapbox.center"]["lon"],
+            map_selected[-1]["zoom"],
+        }
+    else:
+        current_query["map_move_query"] = set()
     return current_query
 
 
@@ -153,6 +182,9 @@ def update_state(current_query: Dict[str, Set]):
         if current_query[query] - st.session_state[query]:
             st.session_state[query] = current_query[query]
             rerun = True
+    if current_query["map_move_query"] - st.session_state["map_move_query"]:
+        st.session_state["map_move_query"] = current_query["map_move_query"]
+        rerun = True
 
     if rerun:
         st.experimental_rerun()
@@ -161,11 +193,11 @@ def update_state(current_query: Dict[str, Set]):
 def main():
     st.title("Plotly events")
     df_map = load_data_map()
-    tansfomred_df_map, selected_df_map = query_data_map(df_map)
-    current_query = render_plotly_map_ui(tansfomred_df_map)
+    tansformed_df_map, selected_df_map = query_data_map(df_map)
+    current_query = render_plotly_map_ui(tansformed_df_map)
     update_state(current_query)
-    st.button("Reset filters", on_click=reset_state_callback)
     st.write(selected_df_map)
+    st.button("Reset filters", on_click=reset_state_callback)
 
 
 if __name__ == "__main__":
