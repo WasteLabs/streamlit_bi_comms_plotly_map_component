@@ -81,8 +81,22 @@ else:
 
 if mapbox_events[2]:
     st.write("LAYOUT CHANGED")
-else:
-    st.empty()
+    st.write(f"Hovered Point: {mapbox_events[3]}")
+    min_max_lat_lon = mapbox_events[3]["raw"]["mapbox._derived"]["coordinates"]
+    min_lon = min_max_lat_lon[0][0]
+    max_lon = min_max_lat_lon[1][0]
+    min_lat = min_max_lat_lon[2][1]
+    max_lat = min_max_lat_lon[0][1]
+    assert min_lon <= max_lon
+    assert min_lat <= max_lat
+    selection_flag = (
+        (df["centroid_lon"] >= min_lon)
+        & (df["centroid_lon"] <= max_lon)
+        & (df["centroid_lat"] >= min_lat)
+        & (df["centroid_lat"] <= max_lat)
+    )
+    df_select = df.loc[selection_flag]
+    st.write(df_select)
 
 plot_name_holder_clicked = st.empty()
 plot_name_holder_selected = st.empty()
