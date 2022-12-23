@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "bi-comms-plotly-map"
+version = "0.0.1"
+description = "Template (and research) for a plotly map with bidirectoinal communication with streamlit."
+authors = ["ejwillemse <ejwillemse@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "bi_comms_plotly_map"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+streamlit = "^1.16.0"
+plotly = "^5.11.0"
+streamlit-plotly-mapboxEvents = "^0.0.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
