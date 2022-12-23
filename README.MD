@@ -23,8 +23,18 @@ And a demo that shows plotly being used in this way:
 
 ### Basic plotly map select view returned results
 
-* examples/plotly_mapbox_events_example.py: original example with a bit of modication from <https://github.com/reyemb/streamlit-plotly-mapbox-events> [issue #4]
-* examples/plotly_mapbox_events_carshare_example.py: example above extended with example from <https://plotly.com/python/scattermapbox/>  [issue #4]
+Just basic illustration of interaction on the map and what is returned via the streamlit-plotly-mapbox-events component:
+
+* `examples/plotly_mapbox_events_example.py`: original example with a bit of modication from <https://github.com/reyemb/streamlit-plotly-mapbox-events> [#4](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/4)
+* `examples/plotly_mapbox_events_carshare_example.py`: example above extended with example from <https://plotly.com/python/scattermapbox/> [#4](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/4)
+
+### Plotly map interaction data-frame filtering
+
+Dataframes are filtered and displayed based on events returned from the streamlit-plotly-mapbox-events component.
+It also includes filtering the data-frame based on the map viewpoint (when zooming and panning).
+There is still a short-comming in that the map resets to its original viewpoint when events happen.
+
+* `examples/plotly_mapbox_events_carshare_dataframe_filter.py`: extension of `examples/plotly_mapbox_events_carshare_example.py` [#6](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/6)
 
 ## Note on poetry
 
