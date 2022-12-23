@@ -12,24 +12,28 @@ streamlit run examples/plotly_mapbox_events_carshare_consistent_map_layout.py
 Exposes all the main plotly mapbox elements needed.
 """
 
-from typing import Dict, Set
+from typing import Dict, Set, Tuple
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 import streamlit as st
-from streamlit_plotly_events import plotly_events
+from streamlit_plotly_mapbox_events import plotly_mapbox_events
+
+PLOTLY_HEIGHT = 500
+LAT_COL = "centroid_lat"
+LON_COL = "centroid_lon"
 
 
 @st.experimental_singleton
-def load_data() -> pd.DataFrame:
-    return px.data.tips()
+def load_data_map() -> pd.DataFrame:
+    return px.data.carshare()
 
 
 def initialize_state():
     """Initializes all filters and counter in Streamlit Session State"""
-    if "bill_to_tip_query" not in st.session_state:
-        st.session_state["bill_to_tip_query"] = set()
+    if "lat_lon_select_query" not in st.session_state:
+        st.session_state["lat_lon_select_query"] = set()
 
     if "counter" not in st.session_state:
         st.session_state.counter = 0
@@ -38,51 +42,59 @@ def initialize_state():
 def reset_state_callback():
     """Resets all filters and increments counter in Streamlit Session State"""
     st.session_state.counter = 1 + st.session_state.counter
-    st.session_state["bill_to_tip_query"] = set()
+    st.session_state["lat_lon_select_query"] = set()
 
 
-def query_data(df: pd.DataFrame) -> pd.DataFrame:
+def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Apply filters in Streamlit Session State
     to filter the input DataFrame
     """
-    df["bill_to_tip"] = (
-        (100 * df["total_bill"]).astype(int).astype(str)
-        + "-"
-        + (100 * df["tip"]).astype(int).astype(str)
+    df = df.assign(
+        **{
+            "lon-lat__id": lambda df: df[LON_COL].astype(str)
+            + "-"
+            + df[LAT_COL].astype(str)
+        },
+        index=df.index,
+        selected=True,
     )
-    df["size_to_time"] = df["size"].astype(str) + "-" + df["time"].astype(str)
-    df["selected"] = True
 
-    if st.session_state["bill_to_tip_query"]:
+    if st.session_state["lat_lon_select_query"]:
         df.loc[
-            ~df["bill_to_tip"].isin(st.session_state["bill_to_tip_query"]), "selected"
+            ~df["lon-lat__id"].isin(st.session_state["lat_lon_select_query"]),
+            "selected",
         ] = False
+        df_selected = df[
+            df["lon-lat__id"].isin(st.session_state["lat_lon_select_query"])
+        ]
+    else:
+        df_selected = pd.DataFrame(columns=df.columns)
+    return df, df_selected
 
-    return df
 
-
-def build_bill_to_tip_figure(df: pd.DataFrame) -> go.Figure:
-    fig = px.scatter(
+def build_map(df: pd.DataFrame) -> go.Figure:
+    fig = px.scatter_mapbox(
         df,
-        "total_bill",
-        "tip",
+        lat=LAT_COL,
+        lon=LON_COL,
         color="selected",
         color_discrete_sequence=["rgba(99, 110, 250, 0.2)", "rgba(99, 110, 250, 1)"],
         category_orders={"selected": [False, True]},
-        hover_data=[
-            "total_bill",
-            "tip",
-            "day",
-        ],
-        height=800,
+        hover_name="index",
+        size="car_hours",
+        color_continuous_scale=px.colors.cyclical.IceFire,
+        size_max=15,
+        zoom=11,
     )
-    fig.update_layout(paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF")
-    fig.update_xaxes(gridwidth=0.1, gridcolor="#EDEDED")
-    fig.update_yaxes(gridwidth=0.1, gridcolor="#EDEDED")
+    fig.update_layout(
+        mapbox_style="carto-positron",
+        margin={"r": 0, "t": 0, "l": 0, "b": 0},
+        height=PLOTLY_HEIGHT,
+    )
     return fig
 
 
-def render_plotly_ui(transformed_df: pd.DataFrame) -> Dict:
+def render_plotly_map_ui(transformed_df: pd.DataFrame) -> Dict:
     """Renders all Plotly figures.
 
     Returns a Dict of filter to set of row identifiers to keep, built from the
@@ -90,18 +102,19 @@ def render_plotly_ui(transformed_df: pd.DataFrame) -> Dict:
 
     The return will be then stored into Streamlit Session State next.
     """
-    bill_to_tip_figure = build_bill_to_tip_figure(transformed_df)
-    bill_to_tip_selected = plotly_events(
-        bill_to_tip_figure,
+    fig = build_map(transformed_df)
+    map_selected = plotly_mapbox_events(
+        fig,
         select_event=True,
-        key=f"bill_to_tip_{st.session_state.counter}",
+        key=f"lat_lon_select_query{st.session_state.counter}",
+        override_height=PLOTLY_HEIGHT,
+        override_width="%100",
     )
 
     current_query = {}
-    current_query["bill_to_tip_query"] = {
-        f"{int(100*el['x'])}-{int(100*el['y'])}" for el in bill_to_tip_selected
+    current_query["lat_lon_select_query"] = {
+        f"{x['lon']}-{x['lat']}" for x in map_selected[1]
     }
-
     return current_query
 
 
@@ -112,8 +125,8 @@ def update_state(current_query: Dict[str, Set]):
     rerun Streamlit to activate the filtering and plot updating with the new info in State.
     """
     rerun = False
-    if current_query["bill_to_tip_query"] - st.session_state["bill_to_tip_query"]:
-        st.session_state["bill_to_tip_query"] = current_query["bill_to_tip_query"]
+    if current_query["lat_lon_select_query"] - st.session_state["lat_lon_select_query"]:
+        st.session_state["lat_lon_select_query"] = current_query["lat_lon_select_query"]
         rerun = True
 
     if rerun:
@@ -121,16 +134,13 @@ def update_state(current_query: Dict[str, Set]):
 
 
 def main():
-    df = load_data()
-    transformed_df = query_data(df)
-
     st.title("Plotly events")
-
-    current_query = render_plotly_ui(transformed_df)
-
+    df_map = load_data_map()
+    tansfomred_df_map, selected_df_map = query_data_map(df_map)
+    current_query = render_plotly_map_ui(tansfomred_df_map)
     update_state(current_query)
-
     st.button("Reset filters", on_click=reset_state_callback)
+    st.write(selected_df_map)
 
 
 if __name__ == "__main__":
