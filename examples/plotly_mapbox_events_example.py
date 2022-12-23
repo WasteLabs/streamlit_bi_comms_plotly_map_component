@@ -42,7 +42,7 @@ df = pd.DataFrame(
             8: 7.678,
         },
         "hover": {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9},
-        "color_1": {0: 3, 1: 3, 2: 4, 3: 3, 4: 5, 5: 5, 6: 5, 7: 4, 8: 2},
+        "color_1": {0: 30, 1: 30, 2: 40, 3: 30, 4: 50, 5: 50, 6: 50, 7: 40, 8: 20},
         "color_2": {0: 5, 1: 5, 2: 3, 3: 1, 4: 1, 5: 2, 6: 5, 7: 2, 8: 2},
         "color_3": {0: 3, 1: 2, 2: 1, 3: 5, 4: 3, 5: 2, 6: 5, 7: 2, 8: 2},
     }
@@ -56,8 +56,11 @@ mapbox = px.scatter_mapbox(
     lon="lon",
     hover_name="hover",
     color=column_selected,
-    zoom=5.5,
+    color_continuous_scale=px.colors.cyclical.IceFire,
+    size=column_selected,
+    zoom=4,
     height=500,
+    size_max=15,
 )
 
 mapbox.update_layout(mapbox_style="carto-positron")
