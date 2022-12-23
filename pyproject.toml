@@ -15,6 +15,7 @@ streamlit-plotly-mapboxEvents = "^0.0.4"
 pylint = "^2.15.9"
 black = "^22.12.0"
 watchdog = "^2.2.0"
+streamlit-plotly-events = "^0.0.6"
 
 
 [tool.poetry.group.dev.dependencies]

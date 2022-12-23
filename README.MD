@@ -36,6 +36,19 @@ There is still a short-comming in that the map resets to its original viewpoint 
 
 * `examples/plotly_mapbox_events_carshare_dataframe_filter.py`: extension of `examples/plotly_mapbox_events_carshare_example.py` [#6](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/6)
 
+### Potly map interaction with zoom-level retained
+
+Same functionality as above, and with zoom level and pan level maintained:
+
+* `examples/plotly_mapbox_events_carshare_consistent_map_layout.py`: extension of ``examples/plotly_mapbox_events_carshare_dataframe_filter.py` [#8](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/8>)
+
+This forms the basis for more exotic examples.
+
+Known issues:
+
+* Sometimes the map jitters too and from the previous selection area. See issue [#9](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/9).
+* When using multiple draw selects (pressing down shift key), the retained draw shapes are as per the previous viewpoint (not the current one). See issue [#10](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/10)
+
 ## Note on poetry
 
 To get it fully up and running in shell:
