@@ -859,6 +859,18 @@ files = [
 six = ">=1.5"
 
 [[package]]
+name = "python-decouple"
+version = "3.6"
+description = "Strict separation of settings from code."
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "python-decouple-3.6.tar.gz", hash = "sha256:2838cdf77a5cf127d7e8b339ce14c25bceb3af3e674e039d4901ba16359968c7"},
+    {file = "python_decouple-3.6-py3-none-any.whl", hash = "sha256:6cf502dc963a5c642ea5ead069847df3d916a6420cad5599185de6bab11d8c2e"},
+]
+
+[[package]]
 name = "pytz"
 version = "2022.7"
 description = "World timezone definitions, modern and historical"
@@ -1002,6 +1014,23 @@ watchdog = {version = "*", markers = "platform_system != \"Darwin\""}
 
 [package.extras]
 snowflake = ["snowflake-snowpark-python"]
+
+[[package]]
+name = "streamlit-aggrid"
+version = "0.3.3"
+description = "Streamlit component implementation of ag-grid"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "streamlit-aggrid-0.3.3.tar.gz", hash = "sha256:d96edb102df98450f3b6bcf5a52b64e6ceef9678e82e2dba9cfef074e7f134ab"},
+    {file = "streamlit_aggrid-0.3.3-py3-none-any.whl", hash = "sha256:c5202347b1257c4246ef3541b233866f57bc930b97040be58b059093c4fee22e"},
+]
+
+[package.dependencies]
+pandas = ">=1.2"
+python-decouple = ">=3.6,<4.0"
+streamlit = ">=0.87.0"
 
 [[package]]
 name = "streamlit-plotly-events"
@@ -1331,4 +1360,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "53c23b3b80b2ef363178cd2f80bd9d9943d228c220518d3c991c372ca53f35ef"
+content-hash = "eeae48fd65521d5a960995a9dd4bc3854bf453e9d3b3b6d12193c0c9f11eb005"
