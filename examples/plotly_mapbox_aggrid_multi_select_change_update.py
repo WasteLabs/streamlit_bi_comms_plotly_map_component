@@ -14,6 +14,7 @@ This is a comprehensive and last update. See issue [16](https://github.com/Waste
 
 from typing import Dict, Set, Tuple
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
@@ -51,7 +52,25 @@ COLUMN_ORDER = [
 
 
 @st.experimental_singleton
-def load_transform_data() -> pd.DataFrame:
+def load_transform_data():
+    """Load data and do some basic transformation. The `st.experimental_singleton`
+    decorator prevents the data from being continously reloaded.
+    """
+    data = px.data.carshare()
+    data = data.assign(
+        **{
+            "lon-lat__id": lambda data: data[LON_COL].astype(str)
+            + "-"
+            + data[LAT_COL].astype(str)
+        },
+        route="R" + data["peak_hour"].astype(str).str.zfill(2),
+        index=data.index,
+        selected=False,
+    ).sort_values(["route"])[COLUMN_ORDER]
+    st.session_state.data = data.copy()
+
+
+def re_load_transform_data():
     """Load data and do some basic transformation. The `st.experimental_singleton`
     decorator prevents the data from being continously reloaded.
     """
@@ -106,7 +125,7 @@ def reset_state_callback():
     st.session_state.data = st.session_state.data.assign(selected=False)
 
 
-def query_data_map() -> Tuple[pd.DataFrame, pd.DataFrame]:
+def query_data_map() -> pd.DataFrame:
     """Apply filters in Streamlit Session State to filter the input DataFrame"""
     selected_ids = set()
     query_update = False
@@ -128,6 +147,7 @@ def query_data_map() -> Tuple[pd.DataFrame, pd.DataFrame]:
             "selected",
         ] = True
 
+    st.write(st.session_state.data)
     df_selected = st.session_state.data.loc[st.session_state.data["selected"]]
     return df_selected
 
@@ -251,7 +271,11 @@ def render_plotly_map_ui() -> None:
 
 
 def selection_dataframe() -> None:
-    data = st.session_state.data
+    data = st.session_state.data.copy()
+    data = data.assign(temp_index=np.arange(data.shape[0]))
+
+    pre_selected_rows = data.loc[data["selected"]]["temp_index"].tolist()
+
     gb = GridOptionsBuilder.from_dataframe(data)
     gb.configure_pagination(
         paginationAutoPageSize=False, paginationPageSize=data.shape[0]
@@ -262,6 +286,7 @@ def selection_dataframe() -> None:
         "multiple",
         use_checkbox=True,
         groupSelectsChildren="Group checkbox select children",
+        pre_selected_rows=pre_selected_rows,
     )  # Enable multi-row selection
     gridOptions = gb.build()
 
@@ -326,7 +351,6 @@ def main():
     st.text(
         "Selecting elements on the map with lasso, or in the table. Update the route of selected elements."
     )
-    load_transform_data()
     selected_df_map = query_data_map()
     render_plotly_map_ui()
     selection_dataframe()
@@ -338,4 +362,5 @@ def main():
 if __name__ == "__main__":
     st.set_page_config(layout="wide")
     initialize_state()
+    load_transform_data()
     main()
