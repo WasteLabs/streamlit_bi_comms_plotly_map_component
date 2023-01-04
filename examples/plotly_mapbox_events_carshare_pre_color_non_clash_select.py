@@ -40,7 +40,11 @@ MAP_ZOOM = 11
 
 @st.experimental_singleton
 def load_data_map() -> pd.DataFrame:
-    return px.data.carshare()
+    data = px.data.carshare()
+    data = data.assign(
+        route="R" + data["peak_hour"].astype(str).str.zfill(2)
+    ).sort_values(["route"])
+    return data
 
 
 def initialize_state():
@@ -111,15 +115,24 @@ def build_map(df: pd.DataFrame) -> go.Figure:
         df,
         lat=LAT_COL,
         lon=LON_COL,
-        color="selected",
-        color_discrete_sequence=["rgba(99, 110, 250, 0.2)", "rgba(99, 110, 250, 1)"],
-        category_orders={"selected": [False, True]},
+        color="route",
+        color_discrete_sequence=px.colors.qualitative.Plotly,
         hover_name="index",
         size="car_hours",
-        color_continuous_scale=px.colors.cyclical.IceFire,
         size_max=15,
         zoom=zoom,
         center=center,
+    )
+
+    selected_data = df.loc[df["selected"]]
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=selected_data[LAT_COL],
+            lon=selected_data[LON_COL],
+            mode="markers",
+            marker=go.scattermapbox.Marker(size=10, color="rgb(242, 0, 0)", opacity=1),
+            hoverinfo="none",
+        )
     )
     fig.update_layout(
         mapbox_style="carto-positron",
@@ -183,6 +196,7 @@ def update_state(current_query: Dict[str, Set]):
             st.session_state[query] = current_query[query]
             rerun = True
     if current_query["map_move_query"] - st.session_state["map_move_query"]:
+        
         st.session_state["map_move_query"] = current_query["map_move_query"]
         rerun = True
 
