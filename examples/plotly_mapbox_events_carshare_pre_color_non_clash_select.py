@@ -115,7 +115,6 @@ def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def build_map(df: pd.DataFrame) -> go.Figure:
-
     if st.session_state.map_layout:
         center = st.session_state.map_layout["center"]
         zoom = st.session_state.map_layout["zoom"]
@@ -130,6 +129,15 @@ def build_map(df: pd.DataFrame) -> go.Figure:
         color="route",
         color_discrete_sequence=px.colors.qualitative.Plotly,
         hover_name="index",
+        hover_data={
+            "route": True,
+            "peak_hour": True,
+            "car_hours": True,
+            "selected": True,
+            "centroid_lat": False,
+            "centroid_lon": False,
+            "lon-lat__id": False,
+        },
         size="car_hours",
         size_max=15,
         zoom=zoom,
@@ -218,7 +226,10 @@ def update_state(current_query: Dict[str, Set]):
 
 
 def main():
-    st.title("Plotly events")
+    st.title("Plotly-map bi-comms selection")
+    st.text(
+        "Selecting elements on the map with lasso, changes selected element colors and shows the selected elements in the table."
+    )
     df_map = load_data_map()
     tansformed_df_map, selected_df_map = query_data_map(df_map)
     current_query = render_plotly_map_ui(tansformed_df_map)
