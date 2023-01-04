@@ -51,26 +51,8 @@ COLUMN_ORDER = [
 ]
 
 
-@st.experimental_singleton
+# @st.experimental_singleton
 def load_transform_data():
-    """Load data and do some basic transformation. The `st.experimental_singleton`
-    decorator prevents the data from being continously reloaded.
-    """
-    data = px.data.carshare()
-    data = data.assign(
-        **{
-            "lon-lat__id": lambda data: data[LON_COL].astype(str)
-            + "-"
-            + data[LAT_COL].astype(str)
-        },
-        route="R" + data["peak_hour"].astype(str).str.zfill(2),
-        index=data.index,
-        selected=False,
-    ).sort_values(["route"])[COLUMN_ORDER]
-    st.session_state.data = data.copy()
-
-
-def re_load_transform_data():
     """Load data and do some basic transformation. The `st.experimental_singleton`
     decorator prevents the data from being continously reloaded.
     """
@@ -112,6 +94,19 @@ def initialize_state():
     if "current_query" not in st.session_state:
         st.session_state.current_query = {}
 
+    if "route_filters" not in st.session_state:
+        st.session_state.route_filters = []
+
+
+def return_filtered_route_id_data():
+    if st.session_state.route_filters:
+        filtered = st.session_state.data.loc[
+            st.session_state.data["route"].isin(st.session_state.route_filters)
+        ]
+    else:
+        filtered = st.session_state.data
+    return filtered
+
 
 def reset_state_callback():
     """Resets all filters and increments counter in Streamlit Session State"""
@@ -146,8 +141,6 @@ def query_data_map() -> pd.DataFrame:
             st.session_state.data["index"].isin(selected_index),
             "selected",
         ] = True
-
-    st.write(st.session_state.data)
     df_selected = st.session_state.data.loc[st.session_state.data["selected"]]
     return df_selected
 
@@ -215,9 +208,9 @@ def build_map() -> go.Figure:
             height=PLOTLY_HEIGHT,
         )
 
-    center, zoom = return_map_layout_params(st.session_state.data)
-    fig = generate_main_scatter_plot(st.session_state.data, center, zoom)
-    add_selected_data_trace(st.session_state.data, fig)
+    center, zoom = return_map_layout_params(return_filtered_route_id_data())
+    fig = generate_main_scatter_plot(return_filtered_route_id_data(), center, zoom)
+    add_selected_data_trace(return_filtered_route_id_data(), fig)
     update_layout(fig)
     return fig
 
@@ -271,7 +264,7 @@ def render_plotly_map_ui() -> None:
 
 
 def selection_dataframe() -> None:
-    data = st.session_state.data.copy()
+    data = return_filtered_route_id_data().copy()
     data = data.assign(temp_index=np.arange(data.shape[0]))
 
     pre_selected_rows = data.loc[data["selected"]]["temp_index"].tolist()
@@ -346,6 +339,13 @@ def update_state():
         st.experimental_rerun()
 
 
+def activate_side_bar():
+    routes = st.session_state.data["route"].unique()
+    with st.sidebar:
+        st.session_state.route_filters = st.multiselect("Filter route", routes)
+        st.button("Clear selection", on_click=reset_state_callback)
+
+
 def main():
     st.title("Plotly-map bi-comms selection")
     st.text(
@@ -356,11 +356,11 @@ def main():
     selection_dataframe()
     update_state()
     st.write(selected_df_map)
-    st.button("Clear selection", on_click=reset_state_callback)
 
 
 if __name__ == "__main__":
     st.set_page_config(layout="wide")
     initialize_state()
     load_transform_data()
+    activate_side_bar()
     main()
