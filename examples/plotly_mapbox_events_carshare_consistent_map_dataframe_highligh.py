@@ -6,6 +6,8 @@ The orientation of the map is kept consistent (doesn't reset) and items on the m
 Run it via the below from the main project:
 
 ```
+
+
 streamlit run examples/plotly_mapbox_events_carshare_consistent_map_dataframe_highligh.py
 ```
 
