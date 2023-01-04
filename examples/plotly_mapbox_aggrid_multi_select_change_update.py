@@ -18,6 +18,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 import streamlit as st
+from st_aggrid import AgGrid, DataReturnMode, GridOptionsBuilder, GridUpdateMode
 from streamlit_plotly_mapbox_events import plotly_mapbox_events
 
 PLOTLY_HEIGHT = 500
@@ -66,7 +67,6 @@ def load_transform_data() -> pd.DataFrame:
         selected=False,
     ).sort_values(["route"])[COLUMN_ORDER]
     st.session_state.data = data.copy()
-    return data
 
 
 def initialize_state():
@@ -90,6 +90,9 @@ def initialize_state():
     if "data" not in st.session_state:
         st.session_state.data = None
 
+    if "current_query" not in st.session_state:
+        st.session_state.current_query = {}
+
 
 def reset_state_callback():
     """Resets all filters and increments counter in Streamlit Session State"""
@@ -98,14 +101,13 @@ def reset_state_callback():
         st.session_state[query] = set()
     st.session_state.map_move_query = set()
     st.session_state.map_layout = {}
+    st.session_state.aggrid_select = set()
+    st.session_state.current_query = {}
+    st.session_state.data = st.session_state.data.assign(selected=False)
 
 
-def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def query_data_map() -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Apply filters in Streamlit Session State to filter the input DataFrame"""
-    df = df.assign(
-        selected=False,
-    )
-
     selected_ids = set()
     query_update = False
     for query in LAT_LON_QUERIES:
@@ -114,15 +116,23 @@ def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
             query_update = True
 
     if query_update:
-        df.loc[
-            df["lon-lat__id"].isin(selected_ids),
+        st.session_state.data.loc[
+            st.session_state.data["lon-lat__id"].isin(selected_ids),
             "selected",
         ] = True
-    df_selected = df[df["lon-lat__id"].isin(selected_ids)]
-    return df, df_selected
+
+    if st.session_state["aggrid_select"]:
+        selected_index = st.session_state["aggrid_select"]
+        st.session_state.data.loc[
+            st.session_state.data["index"].isin(selected_index),
+            "selected",
+        ] = True
+
+    df_selected = st.session_state.data.loc[st.session_state.data["selected"]]
+    return df_selected
 
 
-def build_map(df: pd.DataFrame) -> go.Figure:
+def build_map() -> go.Figure:
     """Build a scatter plot on map of selected and normal elements."""
 
     def return_map_layout_params(df: pd.DataFrame) -> tuple[dict, int]:
@@ -185,14 +195,14 @@ def build_map(df: pd.DataFrame) -> go.Figure:
             height=PLOTLY_HEIGHT,
         )
 
-    center, zoom = return_map_layout_params(df)
-    fig = generate_main_scatter_plot(df, center, zoom)
-    add_selected_data_trace(df, fig)
+    center, zoom = return_map_layout_params(st.session_state.data)
+    fig = generate_main_scatter_plot(st.session_state.data, center, zoom)
+    add_selected_data_trace(st.session_state.data, fig)
     update_layout(fig)
     return fig
 
 
-def render_plotly_map_ui(transformed_df: pd.DataFrame) -> Dict:
+def render_plotly_map_ui() -> None:
     """Renders all Plotly figures.
 
     Returns a Dict of filter to set of row identifiers to keep, built from the
@@ -201,34 +211,32 @@ def render_plotly_map_ui(transformed_df: pd.DataFrame) -> Dict:
     The return will be then stored into Streamlit Session State next.
     """
 
-    def return_query_selections(map_selected: tuple) -> dict:
+    def return_query_selections(map_selected: tuple) -> None:
         """Unpack events from plotly mapbox events"""
-        current_query = {}
         i = 0
         for query in LAT_LON_QUERIES:  # search for point selections on map
             if LAT_LON_QUERIES_ACTIVE[query] is True:
-                current_query[query] = {
+                st.session_state.current_query[query] = {
                     f"{x['lon']}-{x['lat']}" for x in map_selected[i]
                 }
                 i += 1
             else:
-                current_query[query] = set()
+                st.session_state.current_query[query] = set()
 
         if map_selected[-1]:  # there was a layout update
             st.session_state.map_layout["center"] = map_selected[-1]["raw"][
                 "mapbox.center"
             ]
             st.session_state.map_layout["zoom"] = map_selected[-1]["zoom"]
-            current_query["map_move_query"] = {
+            st.session_state.current_query["map_move_query"] = {
                 map_selected[-1]["raw"]["mapbox.center"]["lat"],
                 map_selected[-1]["raw"]["mapbox.center"]["lon"],
                 map_selected[-1]["zoom"],
             }
         else:
-            current_query["map_move_query"] = set()
-        return current_query
+            st.session_state.current_query["map_move_query"] = set()
 
-    fig = build_map(transformed_df)
+    fig = build_map()
     map_selected = plotly_mapbox_events(
         fig,
         click_event=LAT_LON_QUERIES_ACTIVE["lat_lon_click_query"],
@@ -239,11 +247,47 @@ def render_plotly_map_ui(transformed_df: pd.DataFrame) -> Dict:
         override_height=PLOTLY_HEIGHT,
         override_width="%100",
     )
-    current_query = return_query_selections(map_selected)
-    return current_query
+    return_query_selections(map_selected)
 
 
-def update_state(current_query: Dict[str, Set]):
+def selection_dataframe() -> None:
+    data = st.session_state.data
+    gb = GridOptionsBuilder.from_dataframe(data)
+    gb.configure_pagination(
+        paginationAutoPageSize=False, paginationPageSize=data.shape[0]
+    )  # Add pagination
+    gb.configure_column("index", headerCheckboxSelection=True)
+    gb.configure_side_bar()  # Add a sidebar
+    gb.configure_selection(
+        "multiple",
+        use_checkbox=True,
+        groupSelectsChildren="Group checkbox select children",
+    )  # Enable multi-row selection
+    gridOptions = gb.build()
+
+    grid_response = AgGrid(
+        data,
+        gridOptions=gridOptions,
+        data_return_mode="AS_INPUT",
+        update_mode="MANUAL",
+        columns_auto_size_mode="FIT_CONTENTS",
+        fit_columns_on_grid_load=False,
+        theme="streamlit",  # Add theme color to the table
+        enable_enterprise_modules=True,
+        height=350,
+        width="100%",
+        reload_data=False,
+    )
+    selected = grid_response["selected_rows"]
+    selected_df = pd.DataFrame(selected)
+    if selected_df.shape[0] > 0:
+        selected_index = set(selected_df["index"].tolist())
+    else:
+        selected_index = set()
+    st.session_state.current_query["aggrid_select"] = selected_index
+
+
+def update_state():
     """Stores input dict of filters into Streamlit Session State.
 
     If one of the input filters is different from previous value in Session State,
@@ -251,12 +295,26 @@ def update_state(current_query: Dict[str, Set]):
     """
     rerun = False
     for query in LAT_LON_QUERIES:
-        if current_query[query] - st.session_state[query]:
-            st.session_state[query] = current_query[query]
+        if st.session_state.current_query[query] - st.session_state[query]:
+            st.session_state[query] = st.session_state.current_query[query]
             rerun = True
 
-    if current_query["map_move_query"] - st.session_state["map_move_query"]:
-        st.session_state["map_move_query"] = current_query["map_move_query"]
+    if (
+        st.session_state.current_query["map_move_query"]
+        - st.session_state["map_move_query"]
+    ):
+        st.session_state["map_move_query"] = st.session_state.current_query[
+            "map_move_query"
+        ]
+        rerun = True
+
+    if (
+        st.session_state.current_query["aggrid_select"]
+        - st.session_state["aggrid_select"]
+    ):
+        st.session_state["aggrid_select"] = st.session_state.current_query[
+            "aggrid_select"
+        ]
         rerun = True
 
     if rerun:
@@ -268,10 +326,11 @@ def main():
     st.text(
         "Selecting elements on the map with lasso, or in the table. Update the route of selected elements."
     )
-    df_map = load_transform_data()
-    tansformed_df_map, selected_df_map = query_data_map(df_map)
-    current_query = render_plotly_map_ui(tansformed_df_map)
-    update_state(current_query)
+    load_transform_data()
+    selected_df_map = query_data_map()
+    render_plotly_map_ui()
+    selection_dataframe()
+    update_state()
     st.write(selected_df_map)
     st.button("Clear selection", on_click=reset_state_callback)
 
