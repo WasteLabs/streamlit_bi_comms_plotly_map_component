@@ -83,7 +83,7 @@ def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
             + df[LAT_COL].astype(str)
         },
         index=df.index,
-        selected=True,
+        selected=False,
     )
 
     selected_ids = set()
@@ -95,9 +95,9 @@ def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
     if query_update:
         df.loc[
-            ~df["lon-lat__id"].isin(selected_ids),
+            df["lon-lat__id"].isin(selected_ids),
             "selected",
-        ] = False
+        ] = True
     df_selected = df[df["lon-lat__id"].isin(selected_ids)]
     return df, df_selected
 
@@ -132,6 +132,7 @@ def build_map(df: pd.DataFrame) -> go.Figure:
             mode="markers",
             marker=go.scattermapbox.Marker(size=10, color="rgb(242, 0, 0)", opacity=1),
             hoverinfo="none",
+            name="Selected",
         )
     )
     fig.update_layout(
@@ -196,7 +197,7 @@ def update_state(current_query: Dict[str, Set]):
             st.session_state[query] = current_query[query]
             rerun = True
     if current_query["map_move_query"] - st.session_state["map_move_query"]:
-        
+
         st.session_state["map_move_query"] = current_query["map_move_query"]
         rerun = True
 
