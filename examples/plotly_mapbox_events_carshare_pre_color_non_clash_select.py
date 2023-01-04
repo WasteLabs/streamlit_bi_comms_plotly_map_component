@@ -37,13 +37,31 @@ LAT_LON_QUERIES_ACTIVE = {
 
 MAP_ZOOM = 11
 
+COLUMN_ORDER = [
+    "index",
+    "route",
+    "peak_hour",
+    "car_hours",
+    "centroid_lat",
+    "centroid_lon",
+    "selected",
+    "lon-lat__id",
+]
+
 
 @st.experimental_singleton
 def load_data_map() -> pd.DataFrame:
     data = px.data.carshare()
     data = data.assign(
-        route="R" + data["peak_hour"].astype(str).str.zfill(2)
-    ).sort_values(["route"])
+        **{
+            "lon-lat__id": lambda data: data[LON_COL].astype(str)
+            + "-"
+            + data[LAT_COL].astype(str)
+        },
+        route="R" + data["peak_hour"].astype(str).str.zfill(2),
+        index=data.index,
+        selected=False,
+    ).sort_values(["route"])[COLUMN_ORDER]
     return data
 
 
@@ -77,12 +95,6 @@ def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     to filter the input DataFrame
     """
     df = df.assign(
-        **{
-            "lon-lat__id": lambda df: df[LON_COL].astype(str)
-            + "-"
-            + df[LAT_COL].astype(str)
-        },
-        index=df.index,
         selected=False,
     )
 
@@ -212,7 +224,7 @@ def main():
     current_query = render_plotly_map_ui(tansformed_df_map)
     update_state(current_query)
     st.write(selected_df_map)
-    st.button("Reset filters", on_click=reset_state_callback)
+    st.button("Clear selection", on_click=reset_state_callback)
 
 
 if __name__ == "__main__":
