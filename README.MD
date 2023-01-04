@@ -59,6 +59,12 @@ Known issues:
 * Sometimes the map jitters too and from the previous selection area. See issue [#9](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/9).
 * When using multiple draw selects (pressing down shift key), the retained draw shapes are as per the previous viewpoint (not the current one). See issue [#10](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/10)
 
+### Potly map with points highlighted based on data-frame selection
+
+A reduced version of the above, where points are highlighted on the map when selected in a dataframe:
+
+* `examples/plotly_mapbox_events_carshare_consistent_map_dataframe_highligh.py`: done for issue [#12](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/12)
+
 ## Note on poetry
 
 To get it fully up and running in shell:

@@ -6,7 +6,7 @@ The orientation of the map is kept consistent (doesn't reset) and items on the m
 Run it via the below from the main project:
 
 ```
-examples/plotly_mapbox_events_carshare_consistent_map_dataframe_highligh.py
+streamlit run examples/plotly_mapbox_events_carshare_consistent_map_dataframe_highligh.py
 ```
 
 Note that this one requires aggrigrid.
@@ -18,6 +18,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 import streamlit as st
+from st_aggrid import AgGrid, DataReturnMode, GridOptionsBuilder, GridUpdateMode
 from streamlit_plotly_mapbox_events import plotly_mapbox_events
 
 PLOTLY_HEIGHT = 500
@@ -31,7 +32,7 @@ LAT_LON_QUERIES = [
 ]
 LAT_LON_QUERIES_ACTIVE = {
     "lat_lon_click_query": False,
-    "lat_lon_select_query": True,
+    "lat_lon_select_query": False,
     "lat_lon_hover_query": False,
 }
 
@@ -40,7 +41,11 @@ MAP_ZOOM = 11
 
 @st.experimental_singleton
 def load_data_map() -> pd.DataFrame:
-    return px.data.carshare()
+    carshare_data = px.data.carshare()
+    carshare_data = carshare_data.assign(selected=False, index=carshare_data.index)
+    return carshare_data[
+        ["index"] + carshare_data.drop(columns=["index"]).columns.tolist()
+    ]
 
 
 def initialize_state():
@@ -68,7 +73,9 @@ def reset_state_callback():
     st.session_state.map_layout = {}
 
 
-def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def query_data_map(
+    df: pd.DataFrame, df_selected: pd.DataFrame
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Apply filters in Streamlit Session State
     to filter the input DataFrame
     """
@@ -79,22 +86,10 @@ def query_data_map(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
             + df[LAT_COL].astype(str)
         },
         index=df.index,
-        selected=True,
     )
-
-    selected_ids = set()
-    query_update = False
-    for query in LAT_LON_QUERIES:
-        if st.session_state[query]:
-            selected_ids.update(st.session_state[query])
-            query_update = True
-
-    if query_update:
-        df.loc[
-            ~df["lon-lat__id"].isin(selected_ids),
-            "selected",
-        ] = False
-    df_selected = df[df["lon-lat__id"].isin(selected_ids)]
+    if df_selected.shape[0] > 0:
+        df.loc[df["index"].isin(df_selected["index"].values), "selected"] = True
+    df_selected = df[df["selected"]]
     return df, df_selected
 
 
@@ -190,10 +185,47 @@ def update_state(current_query: Dict[str, Set]):
         st.experimental_rerun()
 
 
+def selection_dataframe(df):
+    data = df
+    gb = GridOptionsBuilder.from_dataframe(data)
+    gb.configure_pagination(
+        paginationAutoPageSize=False, paginationPageSize=data.shape[0]
+    )  # Add pagination
+    gb.configure_column("index", headerCheckboxSelection=True)
+    gb.configure_side_bar()  # Add a sidebar
+    gb.configure_selection(
+        "multiple",
+        use_checkbox=True,
+        groupSelectsChildren="Group checkbox select children",
+    )  # Enable multi-row selection
+    gridOptions = gb.build()
+
+    grid_response = AgGrid(
+        data,
+        gridOptions=gridOptions,
+        data_return_mode="AS_INPUT",
+        update_on="MODEL_CHANGED",
+        columns_auto_size_mode="FIT_CONTENTS",
+        fit_columns_on_grid_load=False,
+        theme="streamlit",  # Add theme color to the table
+        enable_enterprise_modules=True,
+        height=350,
+        width="100%",
+        reload_data=False,
+    )
+    data = grid_response["data"]
+    selected = grid_response["selected_rows"]
+    df_selected = pd.DataFrame(selected).drop(
+        columns=["_selectedRowNodeInfo"], errors="ignore"
+    )  # Pass the selected rows to a new dataframe df
+    return df_selected
+
+
 def main():
     st.title("Plotly events")
     df_map = load_data_map()
-    tansformed_df_map, selected_df_map = query_data_map(df_map)
+    df_selected = selection_dataframe(df_map)
+    tansformed_df_map, selected_df_map = query_data_map(df_map, df_selected)
     current_query = render_plotly_map_ui(tansformed_df_map)
     update_state(current_query)
     st.write(selected_df_map)
