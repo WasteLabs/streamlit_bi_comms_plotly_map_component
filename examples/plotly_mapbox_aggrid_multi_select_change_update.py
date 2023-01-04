@@ -356,6 +356,17 @@ def return_selection_summary(df):
         )
         .reset_index()
     )
+    if df_sum.shape[0] > 0:
+        total_row = (
+            df_sum.assign(temp_id=1)
+            .groupby("temp_id")
+            .agg(route=("route", "count"), n_selected=("n_selected", "sum"))
+        ).assign(
+            average_car_hours=df["car_hours"].mean(),
+            peak_hours=df["peak_hour"].nunique(),
+        )
+        total_row.index = ["Total/average"]
+        df_sum = pd.concat([df_sum, total_row])
     return df_sum
 
 
@@ -369,11 +380,11 @@ def main():
     with c1:
         render_plotly_map_ui()
         st.write("Selection summary:")
-        st.write(return_selection_summary(selected_df_map))
+        st.table(return_selection_summary(selected_df_map))
     with c2:
         selection_dataframe()
         st.write("Selected points:")
-        st.write(selected_df_map)
+        st.table(selected_df_map)
     update_state()
 
 
