@@ -292,7 +292,7 @@ def selection_dataframe() -> None:
         fit_columns_on_grid_load=False,
         theme="streamlit",  # Add theme color to the table
         enable_enterprise_modules=True,
-        height=350,
+        height=PLOTLY_HEIGHT,
         width="100%",
         reload_data=False,
     )
@@ -346,16 +346,35 @@ def activate_side_bar():
         st.button("Clear selection", on_click=reset_state_callback)
 
 
+def return_selection_summary(df):
+    df_sum = (
+        df.groupby(["route"])
+        .agg(
+            n_selected=("route", "count"),
+            average_car_hours=("car_hours", "mean"),
+            peak_hours=("peak_hour", "unique"),
+        )
+        .reset_index()
+    )
+    return df_sum
+
+
 def main():
     st.title("Plotly-map bi-comms selection")
     st.text(
         "Selecting elements on the map with lasso, or in the table. Update the route of selected elements."
     )
+    c1, c2 = st.columns(2)
     selected_df_map = query_data_map()
-    render_plotly_map_ui()
-    selection_dataframe()
+    with c1:
+        render_plotly_map_ui()
+        st.write("Selection summary:")
+        st.write(return_selection_summary(selected_df_map))
+    with c2:
+        selection_dataframe()
+        st.write("Selected points:")
+        st.write(selected_df_map)
     update_state()
-    st.write(selected_df_map)
 
 
 if __name__ == "__main__":
