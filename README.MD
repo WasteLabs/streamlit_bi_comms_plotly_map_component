@@ -10,9 +10,9 @@ For example:
 3. Change catagory value of all the selected points.
 4. Update the color of the points on the map.
 
-The latest example can be found in at `examples/plotly_mapbox_events_carshare_consistent_map_layout.py`.
+The latest example can be found in at `examples/plotly_mapbox_events_carshare_pre_color_non_clash_select.py`.
 
-You can see it in action here: <https://youtu.be/2rIpb0LyNgc>
+A video of an older example can can be viewed here: <https://youtu.be/2rIpb0LyNgc>
 
 Refer to the "Examples" section for a list of all examples, chronologically built and extended.
 
@@ -64,6 +64,12 @@ Known issues:
 A reduced version of the above, where points are highlighted on the map when selected in a dataframe:
 
 * `examples/plotly_mapbox_events_carshare_consistent_map_dataframe_highligh.py`: done for issue [#12](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/12)
+
+### Potly map with pre-colored points highlighted red based on lasso select
+
+Similar to "Potly map interaction with zoom-level retained", but here the points are already coloured based on a category variable. New red points are overlayed to show selections.
+
+* `examples/plotly_mapbox_events_carshare_pre_color_non_clash_select.py`: done for issue [#14](https://github.com/WasteLabs/streamlit_bi_comms_plotly_map_component/issues/14)
 
 ## Note on poetry
 
