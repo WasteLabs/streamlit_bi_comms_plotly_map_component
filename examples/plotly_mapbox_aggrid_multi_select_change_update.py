@@ -51,8 +51,26 @@ COLUMN_ORDER = [
 ]
 
 
-# @st.experimental_singleton
+@st.experimental_singleton
 def load_transform_data():
+    """Load data and do some basic transformation. The `st.experimental_singleton`
+    decorator prevents the data from being continously reloaded.
+    """
+    data = px.data.carshare()
+    data = data.assign(
+        **{
+            "lon-lat__id": lambda data: data[LON_COL].astype(str)
+            + "-"
+            + data[LAT_COL].astype(str)
+        },
+        route="R" + data["peak_hour"].astype(str).str.zfill(2),
+        index=data.index,
+        selected=False,
+    ).sort_values(["route"])[COLUMN_ORDER]
+    st.session_state.data = data.copy()
+
+
+def load_transform_data_full():
     """Load data and do some basic transformation. The `st.experimental_singleton`
     decorator prevents the data from being continously reloaded.
     """
@@ -91,6 +109,9 @@ def initialize_state():
     if "data" not in st.session_state:
         st.session_state.data = None
 
+    if "selected_data" not in st.session_state:
+        st.session_state.selected_data = []
+
     if "current_query" not in st.session_state:
         st.session_state.current_query = {}
 
@@ -113,8 +134,8 @@ def reset_state_callback():
     st.session_state.counter += 1
     for query in LAT_LON_QUERIES:
         st.session_state[query] = set()
-    st.session_state.map_move_query = set()
-    st.session_state.map_layout = {}
+    # st.session_state.map_move_query = set()
+    # st.session_state.map_layout = {}
     st.session_state.aggrid_select = set()
     st.session_state.current_query = {}
     st.session_state.data = st.session_state.data.assign(selected=False)
@@ -141,8 +162,9 @@ def query_data_map() -> pd.DataFrame:
             st.session_state.data["index"].isin(selected_index),
             "selected",
         ] = True
-    df_selected = st.session_state.data.loc[st.session_state.data["selected"]]
-    return df_selected
+    st.session_state.selected_data = st.session_state.data.loc[
+        st.session_state.data["selected"]
+    ].copy()
 
 
 def build_map() -> go.Figure:
@@ -343,10 +365,37 @@ def activate_side_bar():
     routes = st.session_state.data["route"].unique()
     with st.sidebar:
         st.session_state.route_filters = st.multiselect("Filter route", routes)
-        st.button("Clear selection", on_click=reset_state_callback)
+        st.button(key="button0", label="Clear selection", on_click=reset_state_callback)
+        update_mode = st.radio(
+            "Update selected points to", ("different route", "new route")
+        )
+        if update_mode == "different route":
+            new_route_id = st.selectbox("Update selected point route value to:", routes)
+        elif update_mode == "new route":
+            new_id = max(routes) + "_" + "A"
+            new_route_id = st.text_input(
+                "Update selected point route value to new route name:", new_id
+            )
+        cap_button = st.button(
+            key="button1",
+            label=f"Change selected points to route {new_route_id}",
+        )
+        if cap_button:
+            update_selected_points(new_route_id)
 
 
-def return_selection_summary(df):
+def update_selected_points(new_route_id):
+    if len(st.session_state.selected_data) > 0:
+        st.session_state.data.loc[
+            st.session_state.data["selected"], "route"
+        ] = new_route_id
+        st.experimental_rerun()
+    else:
+        st.warning(f"No points were selected...")
+
+
+def return_selection_summary():
+    df = st.session_state.selected_data
     df_sum = (
         df.groupby(["route"])
         .agg(
@@ -375,22 +424,24 @@ def main():
     st.text(
         "Selecting elements on the map with lasso, or in the table. Update the route of selected elements."
     )
+    load_transform_data()
+    if st.session_state.data is None:
+        load_transform_data_full()
+    activate_side_bar()
     c1, c2 = st.columns(2)
-    selected_df_map = query_data_map()
+    query_data_map()
     with c1:
         render_plotly_map_ui()
         st.write("Selection summary:")
-        st.table(return_selection_summary(selected_df_map))
+        st.table(return_selection_summary())
     with c2:
         selection_dataframe()
         st.write("Selected points:")
-        st.table(selected_df_map)
+        st.table(st.session_state.selected_data)
     update_state()
 
 
 if __name__ == "__main__":
     st.set_page_config(layout="wide")
     initialize_state()
-    load_transform_data()
-    activate_side_bar()
     main()
